@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Animated Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        #ui-overlay {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .section {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 0 2rem;
+            pointer-events: auto;
+        }
+
+        .section-content {
+            max-width: 800px;
+            margin-left: 2rem;
+        }
+
+        .section h1 {
+            font-size: clamp(2.5rem, 8vw, 6rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            line-height: 1.1;
+        }
+
+        .section h2 {
+            font-size: clamp(1.2rem, 4vw, 2rem);
+            color: #ccc;
+            margin-bottom: 1.5rem;
+            font-weight: 400;
+        }
+
+        .section p {
+            font-size: 1.1rem;
+            color: #999;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+            border: 2px solid #fff;
+            background: transparent;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .btn-primary {
+            background: #fff;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .btn:hover {
+            background: #fff;
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .btn-gradient {
+            background: linear-gradient(45deg, #8b5cf6, #ec4899);
+            border: none;
+        }
+
+        .btn-gradient:hover {
+            background: linear-gradient(45deg, #7c3aed, #db2777);
+            color: #fff;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .nav-menu {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            position: absolute;
+            top: 4rem;
+            right: 1.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-menu.active {
+            display: flex;
+        }
+
+        .nav-menu a {
+            color: #fff;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+
+        .nav-menu a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Progress Indicator */
+        .progress-indicator {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            pointer-events: auto;
+        }
+
+        .progress-dot {
+            width: 8px;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .progress-dot.active {
+            background: #fff;
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #fff;
+            animation: bounce 2s infinite;
+            pointer-events: auto;
+        }
+
+        .scroll-indicator.hidden {
+            display: none;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .progress-bar {
+            width: 256px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 2rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #fff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .section {
+                padding: 0 1rem;
+            }
+
+            .section-content {
+                margin-left: 0;
+            }
+
+            .progress-indicator {
+                right: 1rem;
+            }
+
+            .nav {
+                padding: 1rem;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #666;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <h2 style="font-size: 2rem; font-weight: 700; margin-bottom: 2rem;">Loading Experience</h2>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p style="margin-top: 1rem; color: #999;" id="progressText">0%</p>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="nav-logo">STUDIO</div>
+            <button class="menu-toggle" id="menuToggle">☰</button>
+            <div class="nav-menu" id="navMenu">
+                <a href="#section1">Home</a>
+                <a href="#section2">About</a>
+                <a href="#section3">Services</a>
+                <a href="#section4">Portfolio</a>
+                <a href="#section5">Contact</a>
+            </div>
+        </nav>
+
+        <!-- Sections -->
+        <div class="section" id="section1">
+            <div class="section-content">
+                <h1>Innovation Starts Here</h1>
+                <h2>Pushing boundaries with cutting-edge technology</h2>
+                <p>We create immersive digital experiences that transform how people interact with technology.</p>
+                <a href="#" class="btn btn-primary">Get Started</a>
+                <a href="#" class="btn">Learn More</a>
+            </div>
+        </div>
+
+        <div class="section" id="section2">
+            <div class="section-content">
+                <h1>Creative Solutions</h1>
+                <h2>Where imagination meets implementation</h2>
+                <p>Our team combines artistic vision with technical expertise to deliver exceptional results.</p>
+            </div>
+        </div>
+
+        <div class="section" id="section3">
+            <div class="section-content">
+                <h1>Advanced Technology</h1>
+                <h2>Building tomorrow's digital landscape</h2>
+                <p>Leveraging the latest in web technologies to create performant, scalable solutions.</p>
+            </div>
+        </div>
+
+        <div class="section" id="section4">
+            <div class="section-content">
+                <h1>Future Forward</h1>
+                <h2>Anticipating tomorrow's needs today</h2>
+                <p>We stay ahead of trends to ensure your digital presence remains cutting-edge.</p>
+            </div>
+        </div>
+
+        <div class="section" id="section5">
+            <div class="section-content">
+                <h1>Let's Build Together</h1>
+                <h2>Ready to start your next project?</h2>
+                <p>Contact us to discuss how we can bring your vision to life with innovative 3D experiences.</p>
+                <a href="#" class="btn btn-gradient">Start Project</a>
+                <a href="#" class="btn">View Portfolio</a>
+            </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="progress-indicator">
+            <div class="progress-dot active" data-section="0"></div>
+            <div class="progress-dot" data-section="1"></div>
+            <div class="progress-dot" data-section="2"></div>
+            <div class="progress-dot" data-section="3"></div>
+            <div class="progress-dot" data-section="4"></div>
+        </div>
+
+        <!-- Scroll Indicator -->
+        <div class="scroll-indicator" id="scrollIndicator">
+            <span style="font-size: 0.9rem; margin-bottom: 0.5rem;">Scroll</span>
+            <span style="font-size: 1.2rem;">↓</span>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
